@@ -1,0 +1,18 @@
+{
+    "contents" : "print2.scorecard <- function(x, ...) {\n  # check if ordered factor is provided. Not supported yet\n  vtypes <- vapply(x[-1], function(x) x[['type']], character(1))\n  if (any(vtypes == \"ordered\")) {\n    warning(\"Printing ordered factors not yet supported\")\n  }\n\n  # print the intercept\n  cat(sprintf(\"final_score_0 = %.10f;\\n\", x$initF))\n\n  # loop over values and print each\n  for (k in seq_along(x[-1])) {\n    var <- x[-1][[k]]\n\n    cat(sprintf(\"\\n\\n/* variable: %s */\\n\", var$var))\n    cat(sprintf(\"if missing(%s)\\n\\tthen final_score%i = %-.10f;\",\n                var$var, k, var$missing))\n\n    if (var$type == 'numeric') {\n      for (i in seq_along(var$value)) {\n\n        lhs <- sprintf(\"else if %s < %s\", var$var, var$value[i])\n        rhs <- sprintf(\"\\n\\t then final_score%i = \", k)\n        scr <- sprintf(\"%-.10f;\", var$score[i])\n        cat(\"\\n\", lhs, rhs, scr, sep = \"\")\n      }\n      rhs <- sprintf(\"\\nelse final_score%i = \", k)\n      scr <- sprintf(\"%-.10f;\", var$score[i+1])\n      cat(rhs, scr, sep = \"\")\n\n    } else\n      if (var$type == 'factor') {\n        for (i in seq_along(var$value)) {\n\n          lhs <- sprintf(\"if %s = %s\", var$var, var$value[i])\n          rhs <- sprintf(\"\\n\\t then final_score%i = \", k)\n          scr <- sprintf(\"%-.10f;\", var$score[i])\n          cat(\"\\n\", lhs, rhs, scr, sep=\"\")\n        }\n      } else\n        if (var$type == 'ordered') {\n          lhs <- sprintf(\"if %s = %s\", var$var, var$value[i])\n          rhs <- sprintf(\"\\n\\t then final_score%i = \", k)\n          scr <- sprintf(\"%-.10f;\", var$score[i])\n          cat(\"\\n\", lhs, rhs, scr, sep=\"\")\n        }\n  }\n}\n",
+    "created" : 1428939320819.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3456522297",
+    "id" : "B66B1014",
+    "lastKnownWriteTime" : 1428952835,
+    "path" : "F:/R Dev/boostcard/R/print.scorecard.R",
+    "project_path" : "R/print.scorecard.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "type" : "r_source"
+}
