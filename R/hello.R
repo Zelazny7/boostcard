@@ -1,6 +1,12 @@
 # save(mod, df, drop, s, file='test.data.rData')
 load(file='test.data.rData')
 
+s <- sample(nrow(df), nrow(df)/50)
+classing <- gbm.to.scorecard(mod, gbm.perf(mod), df[s,], precision = NULL)
+
+phat.actual <- predict(mod, df[s,-drop], gbm.perf(mod))
+phat.sc <- predict.scorecard(classing, df[s,-drop])
+
 ### TRY A RISKVIEW MODEL QUICKLY ###
 # library(gbm)
 # library(mjollnir)
@@ -29,14 +35,44 @@ titanic$Parch <- ordered(titanic$Parch)
 titanic$Pclass <- as.numeric(titanic$Pclass)
 mono <- c(-1, 0, -1, 1, 1, 1, 0)
 mod <- gbm(Survived~., data=titanic, n.trees = 5000, verbose=T, var.monotone=NULL, n.minobsinnode = 50)
-n.trees <- 1:5000
+n.trees <- gbm.perf(mod)
 
 #### figure out the ordered variables ###
 
-classing <- gbm.to.scorecard(mod, n.trees, titanic)
+classing <- gbm.to.scorecard(mod, n.trees, newdata = df, precision = NULL)
+
+# which classing vars only have 1 level after rounding
+low.cnts <- which(sapply(classing[-1], function(x) length(x$score)) == 1) + 1
+
+classing2 <- structure(classing[-low.cnts], class='scorecard')
+
+
+phat.actual <- predict(mod, titanic, n.trees)
+phat.sc <- predict(classing2, titanic)
+
+ks.table(phat.actual, titanic$Survived)$ks
+ks.table(phat.sc, titanic$Survived)$ks
+
+
+phat <- plogis(predict(classing, titanic))
+transformed <- lapply(classing[-1], score.scorecard, titanic)
+
+plt <- data.frame(x=titanic$Embarked, y1=titanic$Survived, y2=transformed$Embarked - classing[[1]])
+
+ggplot(plt, aes(x=x, y=y1)) + geom_smooth() + geom_smooth(aes(y=y2), color='red')
+
+# plot the transformed predictors against the mean bad rates
+
+mm.obj <- mm(Survived~., titanic, score = plogis(phat.sc))
+
+
 out$score +  classing[[1]]
 
+phat.actual <- predict.(mod, df, gbm.perf(mod))
+phat.sc <- predict.scorecard(classing)
 
+classing <- gbm.to.scorecard(mod, gbm.perf(mod), newdata = NULL, precision = NULL)
+phat.sc <- predict(classing, df)
 
 lvls <- vlv[vlv <= tree[[2]][p] + 1]
 
