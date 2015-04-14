@@ -26,7 +26,8 @@ getGBMVarData <- function(mod, n.trees) {
 ### let's put this all into one mutha trucka! ###
 
 # return list of data.frames containing split info for each variable
-getGBMClassing <- function(mod, n.trees, newdata = NULL, precision){
+getGBMClassing <- function(mod, n.trees, newdata = NULL, precision,
+                           corr){
   vdata <- getGBMVarData(mod, n.trees)
 
   # extract the split information for each tree
@@ -48,6 +49,14 @@ getGBMClassing <- function(mod, n.trees, newdata = NULL, precision){
     } else {
       classed <- process.numeric(s, v, mod, newdata, precision)
     }
+
+    # calculate points lost based on 'corr'
+    classed$pts.lost <- if (corr == -1) {
+      min(classed$score) - classed$score
+    } else {
+      max(classed$score) - classed$score
+    }
+
     classing[[nm]] <- classed
   }
 
@@ -134,7 +143,7 @@ process.numeric <- function(s, v, mod, newdata=NULL, precision) {
 
   # round numeric weights to the nearest <precision>
   if (!is.null(precision)) {
-    rnd <- round(score / precision, 1) * precision
+    rnd <- round(score / precision) * precision
     score <- tapply(score, rnd, FUN = mean)
     value <- tapply(value, rnd, max)
   }
@@ -167,17 +176,24 @@ process.numeric <- function(s, v, mod, newdata=NULL, precision) {
 #'
 #' @return A scorecard object
 #' @export gbm.to.scorecard
-gbm.to.scorecard <- function(mod, n.trees, newdata = NULL, precision = 0.25) {
+gbm.to.scorecard <- function(mod, n.trees, newdata = NULL, precision = 0.25,
+                             corr = -1) {
   # check interaction depth of GBM mod
   if (mod$interaction.depth > 1) {
     stop(sprintf("GBM interaction depth cannot exceed 1: %i",
                  mod$interaction.depth))
   }
 
+  # check that corr field is in {-1, 1}
+  if (!(corr %in% c(-1, 1))) {
+    stop("corr must be -1 or 1")
+  }
+
   # allow for single number or vector of trees
   if (length(n.trees) == 1) n.trees <- 1:n.trees
 
-  classing <- c(initF=mod$initF, getGBMClassing(mod, n.trees, newdata, precision))
+  classing <- c(initF=mod$initF, getGBMClassing(mod, n.trees, newdata,
+                                                precision, corr))
 
   structure(classing, class="scorecard")
 }
